@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { TextField, Button } from '@material-ui/core';
 import './Popup.css';
-import Cookies from 'js-cookie'
 import {set_api_url, authenticate} from "./requests"
 
 
@@ -16,6 +15,7 @@ function LoginForm({ onLogin }) {
     try {
       console.log("Requesting login...")
       set_api_url(server)
+      await chrome.storage.local.set({ questAPI_url: server }).then(() => console.log("Server stored"));
       console.log("Using server " + server)
       const response = await authenticate(username, password)
       if (response.status >= 400) {
@@ -31,7 +31,7 @@ function LoginForm({ onLogin }) {
         let token = await response.json()
         console.log("Login success with token:" + token.access_token.toString());
 
-        await chrome.storage.local.set({ access_token: token.access_token }).then(() => console.log("Cookie stored"));
+        await chrome.storage.local.set({ access_token: token.access_token }).then(() => console.log("Token stored"));
         await chrome.storage.local.set({ questAPI_username: username }).then(() => console.log("Username stored"));
         setStatus(false);
         onLogin(username);

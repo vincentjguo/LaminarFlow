@@ -2,9 +2,6 @@ import React, { useState } from 'react';
 import { Button, TextField } from '@material-ui/core';
 import { search_classes } from './requests';
 
-function logout() {
-  return true;
-}
 
 
 function Home({ username, onLogout }) {
@@ -24,8 +21,7 @@ function Home({ username, onLogout }) {
   const handleSearch = async () => {
     const response = await get_classes(term, subject, class_number)
     if (!response) {
-      await chrome.storage.local.remove(["access_token"]).then(r => console.log("Logged out"))
-      onLogout();
+      await handleLogout()
     } else if (response.status >= 400) {
         console.log(
           'Search failed with status ' +
@@ -39,8 +35,8 @@ function Home({ username, onLogout }) {
     }
   }
   const handleLogout = async () => {
-    logout();
-    await chrome.storage.local.remove(["access_token", "questAPI_username"]).then(r => console.log("Logged out"))
+    await chrome.storage.local.remove(["access_token", "questAPI_username", "questAPI_url"])
+      .then(r => console.log("Removed cached data for user ", username));
     onLogout();
   };
   return (

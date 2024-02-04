@@ -2,15 +2,23 @@ import React, { useEffect, useState } from "react";
 import LoginForm from "./login";
 import Home from "./home"
 import './Popup.css';
-import { check_pulse } from "./requests";
+import { check_pulse, set_api_url } from "./requests";
 
 async function isAuth() {
-  const token = await chrome.storage.local.get({access_token: "invalid"})
+  const token = await chrome.storage.local.get({access_token: ''})
   console.log("Existing Token: ", token.access_token)
-
-  const username = await chrome.storage.local.get({questAPI_username: ""})
+  const username = await chrome.storage.local.get({questAPI_username: ''})
   console.log("Existing Username: ", username.questAPI_username)
-  await check_pulse(token.access_token).then(response => { // TODO: This requires server to be cached
+  const server_url = await chrome.storage.local.get({questAPI_url: ''})
+  console.log("Existing Server URL: ", server_url.questAPI_url)
+  set_api_url(server_url.questAPI_url)
+
+  if (token.access_token === '' || username.questAPI_username === '' || server_url.questAPI_url === '') {
+    console.log("No token or username found. Authentication needed")
+    return ''
+  }
+
+  await check_pulse(token.access_token).then(response => {
     if (response) {
       console.log("Session is still valid")
     }
@@ -73,7 +81,7 @@ const Popup = () => {
     );
   }
   else {
-    console.log("User is already logged in. Redirecting to home page");
+    console.log("User is logged in. Redirecting to home page");
     return (
       <div className="App">
         <Home username={loggedInUsername} onLogout={handleLogout} />
