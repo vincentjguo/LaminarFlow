@@ -19,7 +19,7 @@ function LoginForm({ onLogin }) {
       console.log("Using server " + server)
       const response = await authenticate(username, password)
       if (response.status >= 400) {
-        console.log(
+        console.error(
           'Login failed with status ' +
             response.status +
             ' and message ' +

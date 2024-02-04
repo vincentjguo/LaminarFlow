@@ -13,17 +13,17 @@ function Home({ username, onLogout }) {
     const accessToken = tokenData.access_token;
 
     if (!accessToken) {
-      throw new Error('Access token not found');
+      handleLogout().then(r => console.error('Access token not found'))
     }
-
-    return await search_classes(term, subject, class_number, accessToken);
+    else
+      return await search_classes(term, subject, class_number, accessToken);
   }
   const handleSearch = async () => {
     const response = await get_classes(term, subject, class_number)
     if (!response) {
       await handleLogout()
     } else if (response.status >= 400) {
-        console.log(
+        console.error(
           'Search failed with status ' +
             response.status +
             ' and message ' +

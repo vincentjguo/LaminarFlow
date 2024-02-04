@@ -23,6 +23,7 @@ export async function search_classes(term: string, subject: string, class_number
     return await fetch(url, { headers })
   }
   catch (e) {
+    console.error(e)
     return 0
   }
 }
