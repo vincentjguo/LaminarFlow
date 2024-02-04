@@ -32,11 +32,11 @@ function LoginForm({ onLogin }) {
         console.log("Login success with token:" + token.access_token.toString());
 
         await chrome.storage.local.set({ access_token: token.access_token }).then(() => console.log("Cookie stored"));
+        await chrome.storage.local.set({ questAPI_username: username }).then(() => console.log("Username stored"));
         setStatus(false);
         onLogin(username);
       }
     } catch (e) {
-      alert(e)
       setStatus(true)
     }
   };

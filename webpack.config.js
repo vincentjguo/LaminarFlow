@@ -11,6 +11,8 @@ var ReactRefreshTypeScript = require('react-refresh-typescript');
 
 const ASSET_PATH = process.env.ASSET_PATH || '/';
 
+const WebpackMildCompile = require('webpack-mild-compile').Plugin;
+
 var alias = {};
 
 // load the secrets
@@ -133,6 +135,7 @@ var options = {
   },
   plugins: [
     isDevelopment && new ReactRefreshWebpackPlugin(),
+    new WebpackMildCompile(),
     new CleanWebpackPlugin({ verbose: false }),
     new webpack.ProgressPlugin(),
     // expose and write the allowed env vars on the compiled bundle

@@ -26,3 +26,11 @@ export async function search_classes(term: string, subject: string, class_number
     return 0
   }
 }
+
+export async function check_pulse(token: string) {
+  const headers = {"Authorization": "Bearer " + token,
+    "accept": "application/json"}
+
+  const response = await fetch(api_url + '/pulse', { headers })
+  return response.status === 200
+}

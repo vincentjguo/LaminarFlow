@@ -40,7 +40,7 @@ function Home({ username, onLogout }) {
   }
   const handleLogout = async () => {
     logout();
-    await chrome.storage.local.remove(["access_token"]).then(r => console.log("Logged out"))
+    await chrome.storage.local.remove(["access_token", "questAPI_username"]).then(r => console.log("Logged out"))
     onLogout();
   };
   return (
