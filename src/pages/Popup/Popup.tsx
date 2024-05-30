@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from "react";
 import LoginForm, { logout } from "./login";
 import "./Popup.css";
-import { WebsocketClient, WebsocketStatus } from "../../websocket-client/websocket";
+import { WebsocketClient, WebsocketResponse, WebsocketStatus } from "../../websocket-client/websocket";
 import { Button } from "@material-ui/core";
 
 
 const Popup = () => {
   const [loggedInUsername, setLoggedInUsername] = useState('');
   const [loading, setLoading] = useState(true);
-  const [client, setClient] = useState<WebsocketClient | null>(null);
+
 
   async function isAuth(): Promise<string> {
     const token = await chrome.storage.local.get({access_token: ''})
@@ -24,33 +24,35 @@ const Popup = () => {
     }
 
     console.log(`Reconnecting to ${server_url.questAPI_url}`)
-    setClient(new WebsocketClient(server_url.questAPI_url))
 
-    let response = await client!.reconnect(token.access_token)
-      .catch(() => {
-        console.log("Reconnect failed")
-        return { status: WebsocketStatus.ERROR, payload: "Reconnect failed" }
-      })
-    
+    let response = await chrome.runtime.sendMessage(
+      {
+        type: 'reconnect',
+        data: [token.access_token, server_url.questAPI_url],
+      }).catch(() => {
+      console.log('Reconnect failed');
+      return { status: WebsocketStatus.ERROR, payload: 'Reconnect failed' };
+    });
+
     if (response.status == WebsocketStatus.SUCCESS) {
       return username.questAPI_username
-    }
-    else {
-      console.log("Token invalid. Logging out")
-      handleLogout()
+    } else {
+      console.log('Token invalid. Logging out');
+      handleLogout();
       return ''
     }
+
+    
   }
   
-  const handleLogin = (username: string, client: WebsocketClient) => {
+  const handleLogin = (username: string) => {
     setLoggedInUsername(username)
-    setClient(client)
   }
 
   
   function handleLogout() {
     setLoggedInUsername('')
-    logout(client!)
+    chrome.runtime.sendMessage({ type: 'logout' }).then();
     console.log("Logged out")
   }
 

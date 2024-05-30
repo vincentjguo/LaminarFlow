@@ -40,10 +40,12 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
 var options = {
   mode: process.env.NODE_ENV || 'development',
   entry: {
-    popup: path.join(__dirname, 'src', 'pages', 'Popup', 'index.jsx')
+    popup: path.join(__dirname, 'src', 'pages', 'Popup', 'index.jsx'),
+    contentScript: path.join(__dirname, 'src', 'scripts', 'contentScript.ts'),
+    background: path.join(__dirname, 'src', 'scripts', 'background.ts'),
   },
   chromeExtensionBoilerplate: {
-    notHotReload: ['background', 'contentScript', 'devtools'],
+    notHotReload: ['contentScript', 'background'],
   },
   output: {
     filename: '[name].bundle.js',

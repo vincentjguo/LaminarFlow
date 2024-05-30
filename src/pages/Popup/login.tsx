@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { TextField, Button, FormControlLabel, Checkbox } from "@material-ui/core";
 import './Popup.css';
-import { WebsocketClient, WebsocketStatus } from "../../websocket-client/websocket";
+import { WebsocketClient, WebsocketResponse, WebsocketStatus } from "../../websocket-client/websocket";
 
 export function logout(client: WebsocketClient) {
   chrome.storage.local.remove(["access_token", "questAPI_username", "questAPI_url"])
@@ -10,7 +10,7 @@ export function logout(client: WebsocketClient) {
 }
 
 
-function LoginForm({ onLogin }: { onLogin: (username: string, client: WebsocketClient) => void }) {
+function LoginForm({ onLogin }: { onLogin: (username: string) => void }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [server, setServer] = useState('');
@@ -28,55 +28,58 @@ function LoginForm({ onLogin }: { onLogin: (username: string, client: WebsocketC
       setDuoAuth("")
       console.log("Requesting login...")
       await chrome.storage.local.set({ questAPI_url: server }).then(() => console.log("Server stored"));
-      console.log("Using server " + server)
-      let client = new WebsocketClient(server)
+      console.log('Using server ' + server);
+      let response = await chrome.runtime.sendMessage({ type: 'login', data: [username, password, remember_me, server] })
 
-      // begin auth flow
-      let response = await client.login(username, password, remember_me)
+      console.debug(response)
+
       if (response.status == WebsocketStatus.CLOSED) {
         console.error(
-          'Login failed and connection closed with reason: ' + response.payload
+          'Login failed and connection closed with reason: ' +
+            response.payload
         );
         setStatus(true);
         setLoading(false);
-        return
-      }
-      else if (response.status == WebsocketStatus.PARTIAL_SUCCESS) {
-        console.log("Duo auth required")
+        setDuoAuth("")
+        return;
+      } else if (response.status == WebsocketStatus.PARTIAL_SUCCESS) {
+        console.log('Duo auth required');
         // handle duo auth
-        setDuoAuth(response.payload)
-        response = await client.receive().catch(() => {
-          throw "Duo auth failed"
-        })
-      }
-      else if (response.status == WebsocketStatus.ERROR) {
+        setDuoAuth(response.payload);
+        response = await chrome.runtime.sendMessage({ type: 'receive' });
+      } else if (response.status == WebsocketStatus.ERROR) {
         console.error(
           'Connection failed with reason:  ' + response.payload
         );
-        setStatus(true)
-        setLoading(false)
-        return
+        setStatus(true);
+        setLoading(false);
+        setDuoAuth("")
+        return;
       }
 
       if (response.status == WebsocketStatus.SUCCESS) {
-        let token = response.payload
-        console.log("Login success with token:" + token);
+        let token = response.payload;
+        console.log('Login success with token:' + token);
 
-        await chrome.storage.local.set({ access_token: token }).then(() => console.log("Token stored"));
-        await chrome.storage.local.set({ questAPI_username: username }).then(() => console.log("Username stored"));
+        await chrome.storage.local
+          .set({ access_token: token })
+          .then(() => console.log('Token stored'));
+        await chrome.storage.local
+          .set({ questAPI_username: username })
+          .then(() => console.log('Username stored'));
         setStatus(false);
-        setLoading(false)
-        onLogin(username, client);
+        setLoading(false);
+        onLogin(username);
+      } else {
+        console.error('Login failed with reason ' + response.payload);
+        setStatus(true);
+        setLoading(false);
+        setDuoAuth("")
       }
-      else {
-        console.error(
-          'Login failed with reason ' + response.payload
-        );
-        setStatus(true)
-        setLoading(false)
-      }
+
 
     } catch (e) {
+      console.error('Login failed with reason ' + e);
       setStatus(true)
       setLoading(false)
       setDuoAuth("")

@@ -25,6 +25,7 @@ export class WebsocketClient {
     this.ws_url = ws_url;
   }
 
+
   /**
    * Begins websocket login flow. If DUO auth is required, consumer must call receive() to accept token after auth.
    * @param username
@@ -82,6 +83,24 @@ export class WebsocketClient {
     })
   }
 
+  search_classes(term: string, subject: string, class_number: string): Promise<WebsocketResponse> {
+    console.log("Beginning search for " + term + " " + subject + " " + class_number)
+    try {
+        this.socket!.send('SEARCH')
+        this.socket!.send(term)
+        this.socket!.send(subject)
+        this.socket!.send(class_number)
+        return this.receive().then(response => {
+          console.log(response)
+          return response
+        }).catch(() => {
+          throw { status: WebsocketStatus.ERROR, message: "Search failed" }
+        })
+    } catch (e: WebsocketResponse | any) {
+      return e
+    }
+  }
+
   receive(): Promise<WebsocketResponse> {
     return new Promise((resolve, reject) => {
       this.socket!.onmessage = function(event) {
@@ -101,6 +120,10 @@ export class WebsocketClient {
 
   signout(): void {
     this.socket!.send('SIGN OUT')
+    this.socket!.close()
+  }
+
+  quit(): void {
     this.socket!.close()
   }
 }

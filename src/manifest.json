@@ -1,8 +1,11 @@
 {
   "manifest_version": 3,
   "name": "LaminarFlow",
+  "version": "0.1.0",
   "description": "Enhance UWFlow user experience",
-  "background": {},
+  "background": {
+    "service_worker": "background.bundle.js"
+  },
   "action": {
     "default_popup": "popup.html",
     "default_icon": "icon-34.png"
@@ -11,6 +14,12 @@
     "128": "icon-128.png"
   },
   "content_scripts": [
+    {
+      "matches": ["*://uwflow.com/*"],
+      "run_at": "document_idle",
+      "js": [
+        "contentScript.bundle.js"]
+    }
   ],
   "web_accessible_resources": [
     {
@@ -18,9 +27,13 @@
       "matches": []
     }
   ],
-  "optional_host_permissions": ["*://*/"],
+  "host_permissions": [
+    "*://uwflow.com/*"
+  ],
   "permissions": [
     "storage",
-    "cookies"
+    "cookies",
+    "tabs",
+    "webRequest"
   ]
 }
