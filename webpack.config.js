@@ -43,9 +43,10 @@ var options = {
     popup: path.join(__dirname, 'src', 'pages', 'Popup', 'index.jsx'),
     contentScript: path.join(__dirname, 'src', 'scripts', 'contentScript.ts'),
     background: path.join(__dirname, 'src', 'scripts', 'background.ts'),
+    injector: path.join(__dirname, 'src', 'scripts', 'injector.ts'),
   },
   chromeExtensionBoilerplate: {
-    notHotReload: ['contentScript', 'background'],
+    notHotReload: ['contentScript', 'background', 'injector'],
   },
   output: {
     filename: '[name].bundle.js',
