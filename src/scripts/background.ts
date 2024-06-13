@@ -6,24 +6,31 @@ import {
 
 let client: WebsocketClient | null = null;
 
+let connection_pending: Promise<WebsocketResponse> | null = null;
+
 async function beginLogin([username, password, remember_me, server]:
                             [string, string, boolean, string]): Promise<WebsocketResponse> {
-  client = new WebsocketClient(server)
-  return await client.login(username, password, remember_me).then(response => {
+  client = new WebsocketClient(server);
+  connection_pending = client.login(username, password, remember_me).then(response => {
+    connection_pending = null;
     return response;
   }).catch(e => {
-    return e
-  })
+    return e;
+  });
+  return await connection_pending;
 }
 
 async function beginReconnect([token, server]: [string, string]) {
-  client = new WebsocketClient(server)
-  return await client.reconnect(token).then(response => {
+  client = new WebsocketClient(server);
+  connection_pending = client.reconnect(token).then(response => {
+    connection_pending = null;
     return response;
   }).catch(e => {
-    return e
-  })
+    return e;
+  });
+  return await connection_pending;
 }
+
 
 // chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 //   if (changeInfo.status === 'loading' && tab.url!.includes("uwflow.com")) {
@@ -57,7 +64,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // login flows (should only be called by internal extension)
   if (request.type === "login") {
     console.log("Received login request")
-    if (client?.status()) {
+    if (connection_pending) {
+      console.log("Connection already in progress")
+      connection_pending.then((r) => sendResponse(r));
+    }
+    else if (client?.status()) {
       console.log("Client already exists")
       sendResponse({
         status: WebsocketStatus.SUCCESS,
@@ -68,7 +79,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
   else if (request.type === "reconnect") {
     console.log("Received reconnect request")
-    if (client?.status()) {
+    if (connection_pending) {
+      console.log("Connection already in progress")
+      connection_pending.then((r) => sendResponse(r));
+    }
+    else if (client?.status()) {
       console.log("Client already exists")
       sendResponse({
         status: WebsocketStatus.SUCCESS,

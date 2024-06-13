@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { TextField, Button, FormControlLabel, Checkbox } from "@material-ui/core";
 import './Popup.css';
-import { WebsocketClient, WebsocketResponse, WebsocketStatus } from "../../websocket-client/websocket";
+import { WebsocketClient, WebsocketStatus } from "../../websocket-client/websocket";
 
 export function logout(client: WebsocketClient) {
   chrome.storage.local.remove(["access_token", "questAPI_username", "questAPI_url"])
@@ -89,12 +89,14 @@ function LoginForm({ onLogin, default_username, default_server }:
     }
   };
 
+
+
   return (
     <form className="login-form" onSubmit={event => {event.preventDefault()}}>
       <TextField value={username} onChange={e => setUsername(e.target.value)} required label="Username or Email" variant="outlined" fullWidth />
       <TextField value={password} onChange={e => setPassword(e.target.value)} required label="Password" type="password" variant="outlined" fullWidth />
       <TextField value={server} onChange={e => setServer(e.target.value)} required label="QuestAPI URL" variant="outlined" fullWidth />
-      {login_failed && <h4 className="login_error">Login Failed, check credentials or server</h4>}
+      {login_failed && <h4 className="login-error">Login Failed, check credentials or server</h4>}
       {loading ? <span>Loading</span> : <Button type="submit" onClick={handleLogin} variant="contained" color="primary">Login</Button>}
       {duo_auth != "" ? <span>Please enter duo auth code {duo_auth}</span> : null}
       <FormControlLabel control={<Checkbox onChange={event => setRememberMe(event.target.checked)}/>} label={"Remember Me"} />

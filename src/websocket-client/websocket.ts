@@ -115,22 +115,32 @@ export class WebsocketClient {
     subject: string,
     class_number: string
   ): Promise<WebsocketResponse> {
-    console.log(
-      'Beginning search for ' + term + ' ' + subject + ' ' + class_number
-    );
-    try {
-      this.socket!.send('SEARCH');
-      this.socket!.send(term);
-      this.socket!.send(subject);
-      this.socket!.send(class_number);
+    return new Promise<WebsocketResponse>((resolve) => {
+      this.lock = this.lock
+        .then(() => {
+          console.log(
+            'Beginning search for ' + term + ' ' + subject + ' ' + class_number
+          );
+          this.socket!.send('SEARCH');
+          this.socket!.send(term);
+          this.socket!.send(subject);
+          this.socket!.send(class_number);
 
-      const response = await this.receive();
-      console.log(response);
-      return response;
-    } catch (e: WebsocketResponse | any) {
-      console.error(e);
-      return { status: WebsocketStatus.ERROR, payload: 'Search failed' };
-    }
+          return this.receive();
+        })
+        .then((response) => {
+          console.log(response);
+          resolve(response);
+        })
+        .catch((e: WebsocketResponse | any) => {
+          console.error(e);
+          resolve({ status: WebsocketStatus.ERROR, payload: 'Search failed' });
+        })
+        .finally(() => {
+          // This delay is to ensure that the next promise in the queue doesn't start immediately.
+          return new Promise((resolve) => setTimeout(resolve, 100));
+        });
+    });
   }
 
   receive(): Promise<WebsocketResponse> {
