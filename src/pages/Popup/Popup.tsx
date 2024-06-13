@@ -6,64 +6,71 @@ import { Button } from "@material-ui/core";
 
 
 const Popup = () => {
-  const [loggedInUsername, setLoggedInUsername] = useState('');
+  const [loggedIn, setLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [username, setUsername] = useState('');
+  const [server, setServer] = useState('');
 
 
-  async function isAuth(): Promise<string> {
-    const token = await chrome.storage.local.get({access_token: ''})
-    console.log("Existing Token: ", token.access_token)
-    const username = await chrome.storage.local.get({questAPI_username: ''})
-    console.log("Existing Username: ", username.questAPI_username)
-    const server_url = await chrome.storage.local.get({questAPI_url: ''})
-    console.log("Existing Server URL: ", server_url.questAPI_url)
+  async function isAuth(token: string, username: string, server_url: string): Promise<boolean> {
 
-    if (token.access_token === '' || username.questAPI_username === '' || server_url.questAPI_url === '') {
+    if (token === '' || username === '' || server_url === '') {
       console.log("No token or username found. Authentication needed")
-      return ''
+      return false
     }
 
-    console.log(`Reconnecting to ${server_url.questAPI_url}`)
+    console.log(`Reconnecting to ${server_url}`)
 
     let response = await chrome.runtime.sendMessage(
       {
         type: 'reconnect',
-        data: [token.access_token, server_url.questAPI_url],
+        data: [token, server_url],
       }).catch(() => {
       console.log('Reconnect failed');
       return { status: WebsocketStatus.ERROR, payload: 'Reconnect failed' };
     });
 
     if (response.status == WebsocketStatus.SUCCESS) {
-      return username.questAPI_username
+      return true
     } else {
       console.log('Token invalid. Logging out');
       handleLogout();
-      return ''
+      return false
     }
 
     
   }
   
-  const handleLogin = (username: string) => {
-    setLoggedInUsername(username)
+  const handleLogin = (isLoggedIn: boolean, name: string) => {
+    setLoggedIn(isLoggedIn)
+    setUsername(name)
   }
 
   
   function handleLogout() {
-    setLoggedInUsername('')
+    setLoggedIn(false)
     chrome.runtime.sendMessage({ type: 'logout' }).then();
+    chrome.storage.local.remove(["access_token"]).then()
     console.log("Logged out")
   }
-
 
   useEffect( () => {
     async function fetchData(): Promise<void> {
       try {
         // set loading to true before calling API
         setLoading(true);
-        const loggedInUsername = await isAuth();
-        setLoggedInUsername(loggedInUsername);
+
+        let token = (await chrome.storage.local.get({access_token: ''})).access_token
+        console.log("Existing Token: ", token)
+        let username = (await chrome.storage.local.get({questAPI_username: ''})).questAPI_username
+        console.log("Existing Username: ", username)
+        let server_url = (await chrome.storage.local.get({questAPI_url: ''})).questAPI_url
+        console.log("Existing Server URL: ", server_url)
+
+        const isLoggedIn = await isAuth(token, username, server_url);
+        setLoggedIn(isLoggedIn);
+        setUsername(username);
+        setServer(server_url);
       } catch (error) {
         console.log(error);
         console.log('User not signed in');
@@ -75,20 +82,24 @@ const Popup = () => {
   if (loading) {
     return <span>Loading</span>;
   }
-  else if (loggedInUsername == '') {
+  else if (!loggedIn) {
     console.log('Redirecting to login form');
+    console.debug("Username: ", username, " Server URL: ", server)
     return (
       <div className="App">
-        <LoginForm onLogin={handleLogin} />
+        <LoginForm onLogin={handleLogin}
+                   default_username={username}
+                   default_server={server}
+        />
       </div>
     );
   }
   else {
-    console.log("User ", loggedInUsername, " is logged in. Redirecting to home page");
+    console.log("User ", username, " is logged in. Redirecting to home page");
     return (
       <div className="App">
         <div>
-          <h4>Welcome {loggedInUsername}</h4>
+          <h4>Welcome {username}</h4>
           <Button onClick={handleLogout} variant="contained" color="primary">
             Logout
           </Button>

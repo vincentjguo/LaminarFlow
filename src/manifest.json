@@ -17,8 +17,7 @@
     {
       "matches": ["*://uwflow.com/*"],
       "run_at": "document_idle",
-      "js": [
-        "injector.bundle.js"]
+      "js": ["injector.bundle.js"]
     }
   ],
   "web_accessible_resources": [
@@ -34,6 +33,6 @@
     "storage",
     "cookies",
     "tabs",
-    "webRequest"
+    "scripting"
   ]
 }

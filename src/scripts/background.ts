@@ -1,4 +1,8 @@
-import { WebsocketClient, WebsocketResponse, WebsocketStatus } from "../websocket-client/websocket";
+import {
+  WebsocketClient,
+  WebsocketResponse,
+  WebsocketStatus,
+} from '../websocket-client/websocket';
 
 let client: WebsocketClient | null = null;
 
@@ -21,10 +25,39 @@ async function beginReconnect([token, server]: [string, string]) {
   })
 }
 
+// chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+//   if (changeInfo.status === 'loading' && tab.url!.includes("uwflow.com")) {
+//     let id = chrome.runtime.id
+//     let inFunc = () => {const extensionId = id}
+//
+//     chrome.scripting.executeScript({
+//       target: { tabId: tabId },
+//       function: inFunc
+//     }).then();
+//   }
+// });
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  // content script flows
+  if (request.type === "inject") {
+    console.log("Received inject request")
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab!.id! },
+      files: [request.data],
+      world: "MAIN"
+    }).then();
+    return false;
+  }
+  else if (request.type === "status") {
+    console.log("Received status request")
+    sendResponse(!!client && client.status());
+    return true
+  }
+
+  // login flows (should only be called by internal extension)
   if (request.type === "login") {
     console.log("Received login request")
-    if (client) {
+    if (client?.status()) {
       console.log("Client already exists")
       sendResponse({
         status: WebsocketStatus.SUCCESS,
@@ -35,17 +68,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
   else if (request.type === "reconnect") {
     console.log("Received reconnect request")
-    if (client) {
+    if (client?.status()) {
       console.log("Client already exists")
       sendResponse({
         status: WebsocketStatus.SUCCESS,
         payload: 'Client already exists',
       });
     } else
-        beginReconnect(request.data).then(r => sendResponse(r))
+      beginReconnect(request.data).then(r => sendResponse(r))
     return true
   }
-  if (!client) {
+
+  // operation flows (following operations require client to exist)
+  if (!client?.status()) {
     console.log("Client does not exist")
     sendResponse({
       status: WebsocketStatus.ERROR,
@@ -72,20 +107,29 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 })
 
+// chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
+//
+// })
+
+chrome.runtime.onStartup.addListener(async () => {
+  console.log("Service worker starting up...")
+  let token = (await chrome.storage.local.get({ access_token: '' })).access_token
+  console.log("Existing Token: ", token)
+  let username = (await chrome.storage.local.get({ questAPI_username: '' })).questAPI_username
+  console.log("Existing Username: ", username)
+  let server_url = (await chrome.storage.local.get({ questAPI_url: '' })).questAPI_url
+  console.log("Existing Server URL: ", server_url)
+
+  beginReconnect([token, server_url]).then()
+})
+
 chrome.runtime.onSuspend.addListener(() => {
   if (client) {
     console.log("Service worker suspending. Closing client...")
     client.quit()
-    client = null
   }
 })
 
-function parseCourseData(requestDetails: chrome.webRequest.WebResponseCacheDetails) {
-  console.log("Detected response from course data")
-}
-
-chrome.webRequest.onResponseStarted.addListener(parseCourseData,
-  { urls: ["https://uwflow.com/graphql"]})
 
 
 

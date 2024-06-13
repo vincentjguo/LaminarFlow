@@ -10,10 +10,13 @@ export function logout(client: WebsocketClient) {
 }
 
 
-function LoginForm({ onLogin }: { onLogin: (username: string) => void }) {
-  const [username, setUsername] = useState('');
+function LoginForm({ onLogin, default_username, default_server }:
+                     { onLogin: (isLoggedIn: boolean, user: string) => void,
+                       default_username: string,
+                       default_server: string }) {
+  const [username, setUsername] = useState(default_username);
   const [password, setPassword] = useState('');
-  const [server, setServer] = useState('');
+  const [server, setServer] = useState(default_server);
   const [remember_me, setRememberMe] = useState(false);
   const [login_failed, setStatus] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -69,7 +72,7 @@ function LoginForm({ onLogin }: { onLogin: (username: string) => void }) {
           .then(() => console.log('Username stored'));
         setStatus(false);
         setLoading(false);
-        onLogin(username);
+        onLogin(true, username);
       } else {
         console.error('Login failed with reason ' + response.payload);
         setStatus(true);

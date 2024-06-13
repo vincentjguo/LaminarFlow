@@ -41,7 +41,7 @@ var options = {
   mode: process.env.NODE_ENV || 'development',
   entry: {
     popup: path.join(__dirname, 'src', 'pages', 'Popup', 'index.jsx'),
-    contentScript: path.join(__dirname, 'src', 'scripts', 'contentScript.ts'),
+    contentScript: path.join(__dirname, 'src', 'scripts', 'course-info-scripts', 'contentScript.ts'),
     background: path.join(__dirname, 'src', 'scripts', 'background.ts'),
     injector: path.join(__dirname, 'src', 'scripts', 'injector.ts'),
   },
