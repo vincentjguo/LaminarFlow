@@ -93,6 +93,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       beginReconnect(request.data).then(r => sendResponse(r))
     return true
   }
+  else if (request.type === "check_existing_login") {
+    console.log("Received check existing login connection request");
+    if (!connection_pending) sendResponse(false)
+    else connection_pending.then((r) => sendResponse(r));
+    return true
+  }
 
   // operation flows (following operations require client to exist)
   if (!client?.status()) {
@@ -104,21 +110,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
   if (request.type === "receive") {
-    console.log("Received receive request")
-    client!.receive().then(r => sendResponse(r))
-    return true
+    console.log("Received receive request");
+    client!.receive().then(r => sendResponse(r));
+    return true;
   }
   else if (request.type === "logout") {
-    console.log("Received logout request")
-    client!.signout()
-    client = null
-    return false
+    console.log("Received logout request");
+    client!.signout();
+    client = null;
+    return false;
   }
   else if (request.type === "search") {
-    console.log("Received search request")
+    console.log("Received search request");
     client!.search_classes(request.data[0], request.data[1], request.data[2])
-      .then(r => sendResponse(r))
-    return true
+      .then(r => sendResponse(r));
+    return true;
   }
 })
 
