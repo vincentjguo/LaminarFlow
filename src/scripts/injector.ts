@@ -1,17 +1,17 @@
 import { LFEventID, Message } from "./course-info-scripts/common";
 
 
-chrome.runtime.sendMessage({ type: 'inject', data: 'contentScript.bundle.js' }).then(() => {
-  console.log("Injected content script")
 
-
-})
 
 chrome.runtime.sendMessage({ type: 'status'}).then((response) => {
   if (!response) {
     console.log("Not logged in. Ignoring...")
     return;
   }
+
+  chrome.runtime.sendMessage({ type: 'inject', data: 'contentScript.bundle.js' }).then(() => {
+    console.log("Injected content script")
+  })
 
   // add event listener for messages from injected script
   console.debug("Adding message listener for tab id: ", LFEventID)

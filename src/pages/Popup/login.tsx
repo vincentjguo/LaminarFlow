@@ -5,8 +5,8 @@ import { WebsocketClient, WebsocketResponse, WebsocketStatus } from "../../webso
 
 export function logout(client: WebsocketClient) {
   chrome.storage.local.remove(["access_token", "questAPI_username", "questAPI_url"])
-    .then(r => console.log("Removed cached data for user"));
-  client.signout()
+    .then(() => console.log("Removed cached data for user"));
+  client.signOut()
 }
 
 function handleLogout() {
@@ -47,7 +47,7 @@ function LoginForm({ onLogin }: { onLogin: (isLoggedIn: boolean, user: string) =
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [server, setServer] = useState('');
-  const [remember_me, setRememberMe] = useState(false);
+  const [remember_me, setRememberMe] = useState(true);
   const [login_failed, setStatus] = useState(false)
   const [loading, setLoading] = useState(false)
   const [duo_auth, setDuoAuth] = useState("")
@@ -68,7 +68,7 @@ function LoginForm({ onLogin }: { onLogin: (isLoggedIn: boolean, user: string) =
       console.log('Duo auth required');
       // handle duo auth
       setDuoAuth(response.payload);
-      response = await chrome.runtime.sendMessage({ type: 'receive' });
+      response = await chrome.runtime.sendMessage({ type: 'duo_auth' });
     } else if (response.status == WebsocketStatus.ERROR) {
       console.error(
         'Connection failed with reason:  ' + response.payload
@@ -86,9 +86,6 @@ function LoginForm({ onLogin }: { onLogin: (isLoggedIn: boolean, user: string) =
       await chrome.storage.local
         .set({ access_token: token })
         .then(() => console.log('Token stored'));
-      await chrome.storage.local
-        .set({ questAPI_username: username })
-        .then(() => console.log('Username stored'));
       setStatus(false);
       setLoading(false);
       onLogin(true, username);
@@ -126,7 +123,7 @@ function LoginForm({ onLogin }: { onLogin: (isLoggedIn: boolean, user: string) =
   };
 
 
-
+  // check if user is logged in already
   useEffect( () => {
     async function fetchData(): Promise<void> {
       try {
@@ -142,14 +139,14 @@ function LoginForm({ onLogin }: { onLogin: (isLoggedIn: boolean, user: string) =
 
         setUsername(username);
         setServer(server_url);
-        console.debug('Username: ', username, ' | Server: ', server_url)
-        let connection_pending: WebsocketResponse | null =
+
+        let connectionPending: WebsocketResponse | null =
           await chrome.runtime.sendMessage({ type: 'check_existing_login' });
 
-        console.debug(connection_pending);
-        let isLoggedIn = false;
-        if (connection_pending) {
-          isLoggedIn = await handleResponse(connection_pending);
+        console.debug(connectionPending);
+        let isLoggedIn: boolean;
+        if (connectionPending) {
+          isLoggedIn = await handleResponse(connectionPending);
         } else {
           isLoggedIn = await isAuth(token, username, server_url);
         }
@@ -161,18 +158,74 @@ function LoginForm({ onLogin }: { onLogin: (isLoggedIn: boolean, user: string) =
         console.log('User not signed in');
       }
     }
-    fetchData().then( r => setLoading(false));
+    fetchData().then( () => setLoading(false));
   }, []);
 
   return (
-    <form className="login-form" onSubmit={event => {event.preventDefault()}}>
-      <TextField value={username} onChange={e => setUsername(e.target.value)} required label="Username or Email" variant="outlined" fullWidth />
-      {!(loading && !password.length) && <TextField value={password} onChange={e => setPassword(e.target.value)} required label="Password" type="password" variant="outlined" fullWidth />}
-      <TextField value={server} onChange={e => setServer(e.target.value)} required label="QuestAPI URL" variant="outlined" fullWidth />
-      {login_failed && <h4 className="login-error">Login Failed, check credentials or server</h4>}
-      {loading ? <span>Loading</span> : <Button type="submit" onClick={handleLogin} variant="contained" color="primary">Login</Button>}
-      {duo_auth != "" ? <span>Please enter duo auth code {duo_auth}</span> : null}
-      {!(loading && !password.length) && <FormControlLabel control={<Checkbox onChange={event => setRememberMe(event.target.checked)}/>} label={"Remember Me"} />}
+    <form
+      className="login-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+      }}
+    >
+      <TextField
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+        required
+        label="Username or Email"
+        variant="outlined"
+        fullWidth
+      />
+      {!(loading && !password.length) && (
+        <TextField
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          label="Password"
+          type="password"
+          variant="outlined"
+          fullWidth
+        />
+      )}
+      <TextField
+        value={server}
+        onChange={(e) => setServer(e.target.value)}
+        required
+        label="QuestAPI URL"
+        variant="outlined"
+        fullWidth
+      />
+      {login_failed && (
+        <h4 className="login-error">
+          Login Failed, check credentials or server
+        </h4>
+      )}
+      {loading ? (
+        <span>Loading</span>
+      ) : (
+        <Button
+          type="submit"
+          onClick={handleLogin}
+          variant="contained"
+          color="primary"
+        >
+          Login
+        </Button>
+      )}
+      {duo_auth != '' ? (
+        <span>Please enter duo auth code {duo_auth}</span>
+      ) : null}
+      {!(loading && !password.length) && (
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={true}
+              onChange={(event) => setRememberMe(event.target.checked)}
+            />
+          }
+          label={'Remember Me'}
+        />
+      )}
     </form>
   );
 }

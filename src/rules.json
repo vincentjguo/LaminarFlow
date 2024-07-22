@@ -1,0 +1,34 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "Cache-Control", "operation": "set", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "*uwflow.com/graphql*",
+      "resourceTypes": "allResourceTypes"
+    }
+  },
+  {
+    "id": 2,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "responseHeaders": [
+        {
+          "operation": "set",
+          "header": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "*uwflow.com/graphql*",
+      "resourceTypes": "allResourceTypes"
+    }
+  }
+]

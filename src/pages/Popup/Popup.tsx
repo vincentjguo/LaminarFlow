@@ -7,6 +7,7 @@ import { Button } from "@material-ui/core";
 const Popup = () => {
   const [loggedIn, setLoggedIn] = useState(false);
   const [username, setUsername] = useState('');
+  const [loading, setLoading] = useState(false);
 
   
   const handleLogin = (isLoggedIn: boolean, name: string) => {
@@ -22,7 +23,18 @@ const Popup = () => {
     console.log("Logged out")
   }
 
+  useEffect( () => {
+    (async () => {
+      setLoading(true);
+      console.debug("Checking login...")
+      await chrome.runtime.sendMessage({ type: 'check_logged_in' }).then((response) => {
+        console.debug("Received login response: ", response);
+        setLoggedIn(response);
+      });
+    })().then(() => setLoading(false));
+  }, []);
 
+  if (loading) return <div>Loading...</div>;
 
   if (!loggedIn) {
     console.log('Redirecting to login form');

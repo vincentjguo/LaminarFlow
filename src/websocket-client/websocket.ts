@@ -1,4 +1,5 @@
 
+
 export enum WebsocketStatus {
   CLOSED = -2,
   ERROR = -1,
@@ -22,12 +23,20 @@ export class WebsocketClient {
   private socket: WebSocket | undefined;
   private lock: Promise<void> = Promise.resolve();
 
+  private sessionCounter: number = 0;
+  private loggedIn: boolean = false;
+  private token: string = '';
+
   constructor(ws_url: string) {
     this.ws_url = ws_url;
   }
 
   status(): boolean {
     return !!this.socket && this.socket.readyState === WebSocket.OPEN;
+  }
+
+  isLoggedIn(): boolean {
+    return this.loggedIn;
   }
 
   /**
@@ -55,12 +64,20 @@ export class WebsocketClient {
 
       return this.receive()
         .then((response) => {
+          if (response.status === WebsocketStatus.SUCCESS) {
+            this.checkIdle();
+            this.token = response.payload;
+            this.loggedIn = true;
+          }
           return response;
         })
         .catch(() => {
           throw { status: WebsocketStatus.CLOSED, message: 'Login Failed' };
         });
     } catch (e: WebsocketResponse | any) {
+      this.sessionCounter = 0; // all sessions logged out
+      this.loggedIn = false;
+      this.socket = undefined;
       return e;
     }
   }
@@ -77,17 +94,31 @@ export class WebsocketClient {
       this.socket.send(token);
       return this.receive()
         .then((response) => {
+          this.loggedIn = response.status === WebsocketStatus.SUCCESS;
+          this.checkIdle();
           return response;
         })
         .catch(() => {
+          this.loggedIn = false;
           throw {
             status: WebsocketStatus.CLOSED,
             message: 'Reauthentication needed',
           };
         });
     } catch (e: WebsocketResponse | any) {
+      this.sessionCounter = 0; // all sessions logged out
+      this.loggedIn = false;
+      this.socket = undefined;
       return e;
     }
+  }
+
+  async duo_auth_receive(): Promise<WebsocketResponse> {
+    let response = await this.receive();
+    this.token = response.payload;
+    this.loggedIn = true;
+    this.checkIdle();
+    return response;
   }
 
   async wait_for_open(): Promise<void> {
@@ -98,7 +129,7 @@ export class WebsocketClient {
         // attach required event listeners
         this.socket!.addEventListener('close', () => {
           console.log('WebSocket closed');
-          this.quit();
+          this.socket = undefined;
         });
 
         resolve();
@@ -117,7 +148,12 @@ export class WebsocketClient {
   ): Promise<WebsocketResponse> {
     return new Promise<WebsocketResponse>((resolve) => {
       this.lock = this.lock
-        .then(() => {
+        .then(async () => {
+          if (!this.status()) { // sanity check
+            console.warn('Cannot search with inactive connection');
+            await this.reconnect(this.token);
+          }
+
           console.log(
             'Beginning search for ' + term + ' ' + subject + ' ' + class_number
           );
@@ -143,30 +179,85 @@ export class WebsocketClient {
     });
   }
 
-  receive(): Promise<WebsocketResponse> {
+  async receive(): Promise<WebsocketResponse> {
     return new Promise((resolve, reject) => {
-      this.socket!.onmessage = function (event) {
+      this.socket!.onmessage = (event) => {
         console.log('Message from server: ', event.data);
+        this.socket!.onmessage = null;
+        this.socket!.onerror = null;
+        this.socket!.onclose = null;
         resolve(JSON.parse(event.data));
       };
-      this.socket!.onerror = function (event) {
-        console.error('WebSocket error: ', event);
+      this.socket!.onerror = (event) => {
+        console.error('WebSocket error while waiting for response: ', event);
+        this.socket!.onmessage = null;
+        this.socket!.onerror = null;
+        this.socket!.onclose = null;
         reject(WebsocketStatus.ERROR);
       };
-      this.socket!.onclose = function (event) {
-        console.log('WebSocket closed: ', event);
+      this.socket!.onclose = (event)=> {
+        console.log('WebSocket closed while waiting for response: ', event);
+        // if (event.code === 1002)
+        //   this.loggedIn = false;
         reject(WebsocketStatus.CLOSED);
       };
     });
   }
 
-  signout(): void {
-    this.socket!.send('SIGN OUT');
-    this.socket!.close();
+  signOut() {
+    if (!this.loggedIn) {
+      console.warn('Cannot sign out unauthenticated user');
+      return;
+    }
+
+    this.incrementSession().then(() => {
+      this.socket!.send('SIGN OUT');
+      this.socket!.close();
+      this.socket = undefined;
+      this.loggedIn = false;
+      this.sessionCounter = 0;
+    });
   }
 
   quit(): void {
+    if (!this.status()) {
+      console.warn('Cannot quit inactive connection');
+      return;
+    }
     this.socket!.send('QUIT');
     this.socket!.close();
+    this.socket = undefined;
+    this.sessionCounter = 0;
+  }
+
+  async incrementSession() {
+    if (!this.loggedIn) {
+      console.warn('Cannot increment session for unauthenticated user');
+      return;
+    }
+    if (!this.token.length)
+      this.token = (await chrome.storage.local.get({access_token: ''})).access_token;
+
+    this.sessionCounter++;
+    console.log('Session count now at ', this.sessionCounter);
+    if (!this.socket) await this.reconnect(this.token);
+  }
+
+  decrementSession() {
+    if (!this.sessionCounter) {
+      console.warn('Tried to remove nonexistent session');
+      return;
+    }
+    this.sessionCounter--;
+    console.log('Session count now at ', this.sessionCounter);
+    this.checkIdle();
+  }
+
+  private checkIdle() {
+    if (!this.status() || this.sessionCounter > 0) return;
+
+    // no sessions found, close websocket
+    console.log('All sessions closed. Closing connection...');
+    this.quit();
   }
 }
