@@ -75,7 +75,6 @@ export class WebsocketClient {
           throw { status: WebsocketStatus.CLOSED, message: 'Login Failed' };
         });
     } catch (e: WebsocketResponse | any) {
-      this.sessionCounter = 0; // all sessions logged out
       this.loggedIn = false;
       this.socket = undefined;
       return e;
@@ -106,7 +105,6 @@ export class WebsocketClient {
           };
         });
     } catch (e: WebsocketResponse | any) {
-      this.sessionCounter = 0; // all sessions logged out
       this.loggedIn = false;
       this.socket = undefined;
       return e;
@@ -215,7 +213,6 @@ export class WebsocketClient {
       this.socket!.close();
       this.socket = undefined;
       this.loggedIn = false;
-      this.sessionCounter = 0;
     });
   }
 
@@ -227,18 +224,15 @@ export class WebsocketClient {
     this.socket!.send('QUIT');
     this.socket!.close();
     this.socket = undefined;
-    this.sessionCounter = 0;
   }
 
   async incrementSession() {
-    if (!this.loggedIn) {
-      console.warn('Cannot increment session for unauthenticated user');
-      return;
-    }
+    this.sessionCounter++;
+
+    if (!this.loggedIn) return;
+
     if (!this.token.length)
       this.token = (await chrome.storage.local.get({access_token: ''})).access_token;
-
-    this.sessionCounter++;
     console.log('Session count now at ', this.sessionCounter);
     if (!this.socket) await this.reconnect(this.token);
   }

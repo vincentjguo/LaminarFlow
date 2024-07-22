@@ -229,6 +229,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 })
 
 
+
 chrome.runtime.onStartup.addListener(async () => {
   console.log("Service worker starting up...")
   let token = (await chrome.storage.local.get({ access_token: '' })).access_token
