@@ -67,6 +67,7 @@ export class WebsocketClient {
           if (response.status === WebsocketStatus.SUCCESS) {
             this.checkIdle();
             this.token = response.payload;
+            console.debug('Websocket client stored token: ', this.token);
             this.loggedIn = true;
           }
           return response;
@@ -95,6 +96,7 @@ export class WebsocketClient {
         .then((response) => {
           this.loggedIn = response.status === WebsocketStatus.SUCCESS;
           this.checkIdle();
+          this.token = response.payload;
           return response;
         })
         .catch(() => {
@@ -210,7 +212,6 @@ export class WebsocketClient {
 
     this.incrementSession().then(() => {
       this.socket!.send('SIGN OUT');
-      this.socket!.close();
       this.socket = undefined;
       this.loggedIn = false;
     });
@@ -222,7 +223,6 @@ export class WebsocketClient {
       return;
     }
     this.socket!.send('QUIT');
-    this.socket!.close();
     this.socket = undefined;
   }
 
