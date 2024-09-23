@@ -78,6 +78,10 @@ async function injectCourseData(data: CourseModel, payload: Map<string, string[]
     console.log("Injecting data for section: ", section_name);
     if (payload.has(section_name)) {
       let section_data = payload.get(section_name)!;
+      if (data.sections[i].meetings.length == 0) {
+        console.warn("No meetings found for section: ", section_name, ". Skipping...");
+        continue;
+      }
       data.sections[i].meetings[0].location = section_data[0];
       let prof_code = profNameToCode(section_data[1]);
       let prof_id = await queryProfID(prof_code);

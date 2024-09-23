@@ -1,11 +1,11 @@
 {
   "name": "laminar-flow",
-  "version": "0.1.0",
+  "version": "1.0.0-alpha",
   "description": "Enhance UWFlow user experience",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/vincentjguo/LaminarFlow"
   },
   "scripts": {
     "build": "node utils/build.js",
