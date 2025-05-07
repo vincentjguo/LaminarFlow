@@ -239,7 +239,7 @@ chrome.runtime.onStartup.addListener(async () => {
   let server_url = (await chrome.storage.local.get({ questAPI_url: '' })).questAPI_url
   console.log("Existing Server URL: ", server_url)
 
-  void beginReconnect([token, server_url]);
+  beginReconnect([token, server_url]);
 })
 
 chrome.runtime.onSuspend.addListener(() => {
